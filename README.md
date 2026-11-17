@@ -4,6 +4,7 @@ LexNexus 是面向法律应用的个人软件工程项目。当前提供可独�
 
 ## 当前功能
 
+- Vue Web 前端可独立启动并展示登录、注册与 404 页面。业务操作待 Java 后端联调，启动方式见 [前端说明](frontend/README.md)。
 - `POST /api/v1/agent/invoke` 接收 Agent 代码、业务输入和请求上下文。
 - Legal QA 返回回答和结构化引用。检索无命中时返回空引用和无直接依据提示。
 - 请求格式错误、业务输入错误、未知 Agent 和模型调用失败均有明确的 HTTP 状态及错误码。
@@ -30,6 +31,7 @@ LexNexus/
 │   ├── pyproject.toml
 │   └── uv.lock
 ├── docs/migration/sources.md
+├── frontend/               # Vue Web 前端
 └── README.md
 ```
 
@@ -97,7 +99,7 @@ uv run --locked --extra dev pytest
 
 1. 接入法律知识库与 RAG，验证检索质量、引用可追溯性和回答依据。
 2. 扩展独立的法律场景 Agent，例如合同审查。
-3. 接入 Java 后端和前端，逐步完善面向用户的业务流程。
+3. 通过 Java 后端接通前端的认证、合同审查与法律问答流程。
 
 ## 许可
 

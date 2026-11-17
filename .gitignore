@@ -24,6 +24,11 @@ dist/
 *.sqlite
 *.sqlite3
 
+# Frontend dependencies and caches
+node_modules/
+.vite/
+pnpm-debug.log*
+
 # Editor and OS files
 .idea/
 .vscode/

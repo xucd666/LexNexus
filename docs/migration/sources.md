@@ -2,7 +2,9 @@
 
 派生代码来自智法宝（law-wiz）的 Git 提交 `be0d7727297c2f20775069ea66d24b79d58a52d9`。原项目 MIT 许可及版权通知完整保存在 [许可证文件](../../ai-service/LICENSES/upstream-MIT.txt) 中，并随 AI Service 的 Python 构建产物分发。
 
-除单独标明的根目录文件外，路径均相对于各仓库的 `ai-service/`。目标列的“原路径”表示文件名及相对路径保持一致。
+## AI Service
+
+下表除单独标明的根目录文件外，路径均相对于各仓库的 `ai-service/`。目标列的“原路径”表示文件名及相对路径保持一致。
 
 | 原文件 | LexNexus 文件 | 调整 |
 | --- | --- | --- |
@@ -16,5 +18,11 @@
 | `app/llm/deepseek.py`、`app/core/config.py`、`.env.example` | 原路径 | 保留模型适配和配置，明确运行模式。 |
 | `pyproject.toml`、`uv.lock` | 原路径 | 适配服务元数据及开发依赖。 |
 | `tests/test_{deepseek,exception_handlers,legal_qa,runtime}.py` | 原路径 | 适配现有用例并补充检索与接口边界测试。 |
+
+## 前端
+
+前端使用同一来源提交。原项目 `frontend/` 中的页面、样式、路由、状态、请求封装、工程配置和锁文件迁入 LexNexus 的 `frontend/`。适配范围包括项目品牌、令牌存储键、开发代理和使用说明。
+
+原仓库根目录 `LICENSE` 的原文保存在 [前端上游 MIT 许可](../../frontend/public/upstream-MIT.txt)，构建时随前端静态产物分发。
 
 原项目的公开归属链接待确认。LexNexus 独立新增部分的许可证待项目维护者确认。
