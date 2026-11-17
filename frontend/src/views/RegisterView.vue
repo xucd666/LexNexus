@@ -85,10 +85,7 @@ async function handleSubmit() {
       verify_code: form.verify_code,
     })
     ElMessage.success('注册成功，请登录')
-    router.replace({
-      name: 'login',
-      query: { account: mode.value === 'phone' ? form.phone : form.email },
-    })
+    router.replace({ name: 'login' })
   } catch (e) {
     if (e instanceof ApiError) {
       e.fieldErrors.forEach(({ field, reason }) => {
