@@ -1,6 +1,6 @@
 # 律枢（LexNexus）Java 后端
 
-J1-1 提供可独立运行的 Spring Boot 基础工程和 HTTP 健康检查。健康检查无需数据库、Redis 或 AI-Service。用户认证、法律问答和合同审查留待后续阶段。
+J1 已提供可独立运行的 Spring Boot 基础工程、HTTP 健康检查和 AI-Service HTTP 客户端。健康检查无需数据库、Redis 或 AI-Service；客户端仅供后续业务层调用。用户认证、对外法律问答和合同审查接口尚未实现。
 
 ## 环境
 

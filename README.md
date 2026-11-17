@@ -1,10 +1,11 @@
 # 律枢（LexNexus）——多智能体法律智能服务平台
 
-LexNexus 是面向法律应用的个人软件工程项目。当前提供可独立运行的 Python AI Service，通过统一的 HTTP 接口按 `agentCode` 调用 Agent。首个 Agent `legal_qa` 实现从检索、引用校验到回答生成的工作流，可使用固定测试材料离线验证。
+LexNexus 是面向法律应用的个人软件工程项目。仓库包含 Vue 前端、Spring Boot Java 后端和 Python AI-Service。Java 后端已具备独立启动、健康检查和调用 AI-Service 的客户端；Python 服务通过统一 HTTP 接口按 `agentCode` 调用 Agent。首个 Agent `legal_qa` 可使用固定测试材料离线验证检索、引用校验和回答流程。
 
 ## 当前功能
 
 - Vue Web 前端可独立启动并展示登录、注册与 404 页面。业务操作待 Java 后端联调，启动方式见 [前端说明](frontend/README.md)。
+- Java 后端提供 `GET /api/v1/health` 和内部 `AiServiceClient`，目前没有对外法律问答、认证或合同审查业务接口。启动、配置与测试方式见 [Java 后端说明](java-backend/README.md)。
 - `POST /api/v1/agent/invoke` 接收 Agent 代码、业务输入和请求上下文。
 - Legal QA 返回回答和结构化引用。检索无命中时返回空引用和无直接依据提示。
 - 请求格式错误、业务输入错误、未知 Agent 和模型调用失败均有明确的 HTTP 状态及错误码。
@@ -12,7 +13,7 @@ LexNexus 是面向法律应用的个人软件工程项目。当前提供可独�
 
 ## 技术栈与目录
 
-CPython 3.14、uv、FastAPI、Pydantic、LangGraph、LangChain、Uvicorn、Pytest 和 Ruff。
+前端使用 Vue 3；Java 后端使用 Java 21、Spring Boot 3.5.16 和 Maven；AI-Service 使用 CPython 3.14、uv、FastAPI、Pydantic、LangGraph、LangChain、Uvicorn、Pytest 和 Ruff。
 
 ```text
 LexNexus/
@@ -32,6 +33,7 @@ LexNexus/
 │   └── uv.lock
 ├── docs/migration/sources.md
 ├── frontend/               # Vue Web 前端
+├── java-backend/           # Spring Boot 基础工程、健康检查与 AI-Service 客户端
 └── README.md
 ```
 
@@ -75,6 +77,15 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/v1/agent/invoke' `
 
 成功响应包含 `requestId`、`data.answer` 和 `data.citations`。在 Fake 模式下，包含“违约金”的问题命中一条标记为离线测试材料的引用。
 
+Java 后端可独立启动，无需先运行 AI-Service：
+
+```powershell
+cd java-backend
+mvn spring-boot:run
+```
+
+另开终端访问 `http://127.0.0.1:8080/api/v1/health` 可检查 Java 进程。健康检查不验证 AI-Service 连通性；`AiServiceClient` 仅供后续 Java 业务层调用，当前没有前端可用的法律问答 API。Java 后端的测试和打包命令见 [模块说明](java-backend/README.md)。
+
 ## Fake 与 Live 模式
 
 | 模式 | 检索与回答 |
@@ -99,7 +110,7 @@ uv run --locked --extra dev pytest
 
 1. 接入法律知识库与 RAG，验证检索质量、引用可追溯性和回答依据。
 2. 扩展独立的法律场景 Agent，例如合同审查。
-3. 通过 Java 后端接通前端的认证、合同审查与法律问答流程。
+3. 在 Java 后端实现认证与业务 API 后，接通前端的合同审查与法律问答流程。
 
 ## 许可
 
