@@ -9,7 +9,7 @@ LexNexus 是面向法律应用的个人软件工程项目。仓库包含 Vue 前
 - `POST /api/v1/agent/invoke` 接收 Agent 代码、业务输入和请求上下文。
 - Legal QA 返回回答和结构化引用。检索无命中时返回空引用和无直接依据提示。
 - 请求格式错误、业务输入错误、未知 Agent 和模型调用失败均有明确的 HTTP 状态及错误码。
-- 检索通过 `LawSearch` 注入。默认提供 Fake 检索，并预留由 DeepSeek 生成回答的运行模式。
+- 检索通过 `LawSearch` 注入，默认使用 Fake 检索，也可配置本地 BGE 与 Milvus Lite。DeepSeek 由独立的 LLM 模式控制。
 
 ## 技术栈与目录
 
@@ -58,6 +58,7 @@ Registry 保存 Agent 注册项。Runtime 查找并调用对应实例。LegalQaA
 ```powershell
 cd ai-service
 $env:AI_SERVICE_MODE = 'fake'
+$env:AI_SERVICE_LAW_SEARCH_BACKEND = 'fake'
 uv sync --locked
 uv run --locked uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
@@ -75,7 +76,7 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/v1/agent/invoke' `
     -Body ([Text.Encoding]::UTF8.GetBytes($body)) | ConvertTo-Json -Depth 8
 ```
 
-成功响应包含 `requestId`、`data.answer` 和 `data.citations`。在 Fake 模式下，包含“违约金”的问题命中一条标记为离线测试材料的引用。
+成功响应包含 `requestId`、`data.answer` 和 `data.citations`。使用默认 Fake 检索时，包含“违约金”的问题命中一条标记为离线测试材料的引用。
 
 Java 后端可独立启动，无需先运行 AI-Service：
 
@@ -86,12 +87,17 @@ mvn spring-boot:run
 
 另开终端访问 `http://127.0.0.1:8080/api/v1/health` 可检查 Java 进程。健康检查不验证 AI-Service 连通性；`AiServiceClient` 仅供后续 Java 业务层调用，当前没有前端可用的法律问答 API。Java 后端的测试和打包命令见 [模块说明](java-backend/README.md)。
 
-## Fake 与 Live 模式
+## 检索后端与 LLM 模式
 
-| 模式 | 检索与回答 |
-| --- | --- |
-| `fake`（默认） | 使用固定测试材料和固定应答，启动无需模型密钥。适合本地开发和自动化测试。 |
-| `live` | 使用由 `create_app(..., law_tool=...)` 注入的法律检索实现及 DeepSeek 适配器。配置项见 [环境变量模板](ai-service/.env.example)。真实检索尚待实现，当前可直接启动 Fake 模式。 |
+| `AI_SERVICE_MODE` | `AI_SERVICE_LAW_SEARCH_BACKEND` | 行为 |
+| --- | --- | --- |
+| `fake` | `fake` | 默认使用固定测试材料和离线应答。 |
+| `fake` | `vector` | 使用本地 BGE 与 Milvus Lite 返回引用，答案仍为离线提示。 |
+| `live` | `vector` | 使用向量检索和 DeepSeek，需要配置模型凭据。 |
+
+向量模式需要 `rag` extra、本地 BGE 快照及已入库的 Milvus Lite Collection，配置见 [环境变量模板](ai-service/.env.example)。同一 Lite 数据库仅由一个服务进程打开。通过 `create_app(..., law_tool=...)` 显式注入的检索器优先于后端配置，`live` 模式要求真实检索器。
+
+使用向量检索时，还需通过 `AI_SERVICE_CITATION_REFERENCE_SOURCE_PATH` 和 `AI_SERVICE_CITATION_REFERENCE_METADATA_PATH` 指定已独立核验的本地 UTF-8 法律原文及 JSON 版本元数据。元数据包含 `document_id`、`law_name`、`source_url` 和 `version_basis`。服务启动时切分并加载快照，核对检索引用的版本、条号、法律名称及完整正文。快照缺失或加载失败会阻止启动。开发时可显式使用仓库法律样本进行验证。
 
 ## 自动化测试
 
@@ -108,7 +114,7 @@ uv run --locked --extra dev pytest
 
 ## 路线图
 
-1. 接入法律知识库与 RAG，验证检索质量、引用可追溯性和回答依据。
+1. 扩充法律知识库，验证检索质量、引用可追溯性和回答依据。
 2. 扩展独立的法律场景 Agent，例如合同审查。
 3. 在 Java 后端实现认证与业务 API 后，接通前端的合同审查与法律问答流程。
 

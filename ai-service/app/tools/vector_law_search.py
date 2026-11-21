@@ -27,6 +27,7 @@ class VectorLawSearch:
         self._store = store
         self._top_k = top_k
         self._search_lock = asyncio.Lock()
+        self._stopping = False
 
     async def search(self, query: str, *, request_id: str, trace_id: str | None) -> list[Citation]:
         """按存储返回顺序生成引用，成功且无命中时返回空列表。
@@ -43,6 +44,9 @@ class VectorLawSearch:
         # 在提交前异步等待，使每个实例最多占用一个工作线程。None 表示使用事件循环的默认线程池。
         await self._search_lock.acquire()
         try:
+            # 获取锁后再检查，关闭时已排队的请求也不能提交新工作。
+            if self._stopping:
+                raise RuntimeError("法律向量检索已停止")
             worker = asyncio.get_running_loop().run_in_executor(None, self._search_sync, query)
         except Exception:
             self._search_lock.release()
@@ -50,6 +54,13 @@ class VectorLawSearch:
         # 请求取消只结束等待。同步工作无法随协程中断，锁交由完成回调释放。
         worker.add_done_callback(self._on_search_done)
         return await asyncio.shield(worker)
+
+    async def stop(self) -> None:
+        """停止提交检索，等待在途工作完成，再由调用方释放存储。"""
+        self._stopping = True
+        # 此锁由工作完成回调释放，即使请求已取消也能等到同步操作结束。
+        async with self._search_lock:
+            pass
 
     def _on_search_done(self, worker: asyncio.Future[list[Citation]]) -> None:
         self._search_lock.release()
