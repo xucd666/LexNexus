@@ -1,0 +1,198 @@
+[
+  {
+    "case_id": "in-01",
+    "question": "供应商到期没有交货，守约方一般可以主张哪些违约救济？",
+    "category": "in_scope",
+    "expected_article_nos": ["第五百七十七条"],
+    "annotation_reason": "问不履行合同的一般违约救济，对应继续履行、补救或赔偿损失的总则。"
+  },
+  {
+    "case_id": "in-02",
+    "question": "距离交货还有一个月，卖家已明确说绝不会交货，必须等期限届满才能追究责任吗？",
+    "category": "in_scope",
+    "expected_article_nos": ["第五百七十八条"],
+    "annotation_reason": "关心履行期届满前明确拒绝履行时能否提前追究违约责任。"
+  },
+  {
+    "case_id": "in-03",
+    "question": "房客连着三个月没交房租，房东能要求补交吗？",
+    "category": "in_scope",
+    "expected_article_nos": ["第五百七十九条"],
+    "annotation_reason": "问租金未付时的支付请求，条文明列租金。"
+  },
+  {
+    "case_id": "in-04",
+    "question": "应付的合同利息一直没给，能不能直接请求对方付清利息？",
+    "category": "in_scope",
+    "expected_article_nos": ["第五百七十九条"],
+    "annotation_reason": "问已到期金钱债务的支付请求，条文明列利息。"
+  },
+  {
+    "case_id": "in-05",
+    "question": "合同约定交付的那件特定物品已经灭失，还能要求继续交付那件物品吗？",
+    "category": "in_scope",
+    "expected_article_nos": ["第五百八十条"],
+    "annotation_reason": "特定物品灭失对应非金钱债务事实上不能履行的例外。"
+  },
+  {
+    "case_id": "in-06",
+    "question": "完成约定的非金钱义务需要付出过高成本，对方还能要求强制履行吗？",
+    "category": "in_scope",
+    "expected_article_nos": ["第五百八十条"],
+    "annotation_reason": "直接询问履行费用过高是否属于非金钱债务继续履行的例外。"
+  },
+  {
+    "case_id": "in-07",
+    "question": "非金钱债务无法履行，合同目的也实现不了，可以请求法院终止合同权利义务吗？",
+    "category": "in_scope",
+    "expected_article_nos": ["第五百八十条"],
+    "annotation_reason": "关注该条第二款的合同目的不能实现和法院应请求终止权利义务。"
+  },
+  {
+    "case_id": "in-08",
+    "question": "约定工作不能强制原承包人履行，可以让违约方承担请第三方做完的费用吗？",
+    "category": "in_scope",
+    "expected_article_nos": ["第五百八十一条"],
+    "annotation_reason": "问不得强制履行时第三人替代履行费用由谁负担。"
+  },
+  {
+    "case_id": "in-09",
+    "question": "买来的机器质量没达到约定，合同也没约定违约责任，可以要求修理或换货吗？",
+    "category": "in_scope",
+    "expected_article_nos": ["第五百八十二条"],
+    "annotation_reason": "履行不符合约定且违约责任无法确定时，条文列有修理与更换。"
+  },
+  {
+    "case_id": "in-10",
+    "question": "收到的货物不符合合同，双方又无法确定对应的违约责任，能不能要求少付一些货款？",
+    "category": "in_scope",
+    "expected_article_nos": ["第五百八十二条"],
+    "annotation_reason": "少付货款对应履行瑕疵救济中的减少价款。"
+  },
+  {
+    "case_id": "in-11",
+    "question": "对方修好了交付设备的缺陷，但维修期间还有其他损失，能另外索赔吗？",
+    "category": "in_scope",
+    "expected_article_nos": ["第五百八十三条"],
+    "annotation_reason": "问题聚焦采取补救措施以后仍有的其他损失。"
+  },
+  {
+    "case_id": "in-12",
+    "question": "对方违约让我失去合同正常履行后本来能赚到的利润，赔偿可以包括这部分吗？",
+    "category": "in_scope",
+    "expected_article_nos": ["第五百八十四条"],
+    "annotation_reason": "损失赔偿额条款明确涵盖合同履行后可以获得的利益。"
+  },
+  {
+    "case_id": "in-13",
+    "question": "远超违约方在签合同时能预见的损失，也能全部算进赔偿吗？",
+    "category": "in_scope",
+    "expected_article_nos": ["第五百八十四条"],
+    "annotation_reason": "直接询问损失赔偿额受订约时可预见范围限制的问题。"
+  },
+  {
+    "case_id": "in-14",
+    "question": "货物不符合约定，合同又没写清违约责任，可以先要求换货，再索赔换货后仍有的其他损失吗？",
+    "category": "in_scope",
+    "expected_article_nos": ["第五百八十二条", "第五百八十三条"],
+    "annotation_reason": "更换与补救之后仍有的其他损失是两个分别由相邻条文覆盖的问题。"
+  },
+  {
+    "case_id": "unrelated-01",
+    "question": "家里的绿萝叶子发黄，应该怎么调整浇水频率？",
+    "category": "unrelated",
+    "expected_article_nos": [],
+    "annotation_reason": "室内植物养护，与合同或其他法律问题无关。"
+  },
+  {
+    "case_id": "unrelated-02",
+    "question": "用电饭锅煮杂粮米要放多少水？",
+    "category": "unrelated",
+    "expected_article_nos": [],
+    "annotation_reason": "家常烹饪用量问题。"
+  },
+  {
+    "case_id": "unrelated-03",
+    "question": "为什么冬天在窗户内侧容易看到水珠？",
+    "category": "unrelated",
+    "expected_article_nos": [],
+    "annotation_reason": "询问日常物理现象。"
+  },
+  {
+    "case_id": "unrelated-04",
+    "question": "周末跑五公里前可以怎么热身？",
+    "category": "unrelated",
+    "expected_article_nos": [],
+    "annotation_reason": "运动准备问题。"
+  },
+  {
+    "case_id": "unrelated-05",
+    "question": "Excel 中怎样把日期列按从早到晚排序？",
+    "category": "unrelated",
+    "expected_article_nos": [],
+    "annotation_reason": "电子表格处理问题。"
+  },
+  {
+    "case_id": "unrelated-06",
+    "question": "怎样记住吉他六线谱上各个音符的位置？",
+    "category": "unrelated",
+    "expected_article_nos": [],
+    "annotation_reason": "音乐学习问题。"
+  },
+  {
+    "case_id": "unrelated-07",
+    "question": "拍摄夜空时，手机应该调什么曝光参数？",
+    "category": "unrelated",
+    "expected_article_nos": [],
+    "annotation_reason": "摄影参数设置问题。"
+  },
+  {
+    "case_id": "outside-01",
+    "question": "承租人拖欠租金，房东向法院起诉的诉讼时效从哪天起算？",
+    "category": "out_of_scope",
+    "expected_article_nos": [],
+    "annotation_reason": "样本涉及租金支付请求，问题所问的诉讼时效起算规则未被覆盖。"
+  },
+  {
+    "case_id": "outside-02",
+    "question": "房东想因承租人连续不交租金解除租赁合同，催告时应给对方多长时间？",
+    "category": "out_of_scope",
+    "expected_article_nos": [],
+    "annotation_reason": "问题问解除租赁合同之前的催告期限，样本中的租金支付条款未提供这一规则。"
+  },
+  {
+    "case_id": "outside-03",
+    "question": "对方违约后该去哪一个法院起诉，合同约定的管辖法院有优先效力吗？",
+    "category": "out_of_scope",
+    "expected_article_nos": [],
+    "annotation_reason": "关键词接近合同违约，但问题问诉讼管辖，八条样本未涉及。"
+  },
+  {
+    "case_id": "outside-04",
+    "question": "合同约定的违约金超过实际损失，法院能否调低？",
+    "category": "out_of_scope",
+    "expected_article_nos": [],
+    "annotation_reason": "样本包含损失赔偿额的计算范围，未覆盖约定违约金的调减规则。"
+  },
+  {
+    "case_id": "outside-05",
+    "question": "劳动合同到期公司不续签，经济补偿按多少个月的工资计算？",
+    "category": "out_of_scope",
+    "expected_article_nos": [],
+    "annotation_reason": "询问劳动合同终止后的经济补偿计算，样本只涉及合同违约救济。"
+  },
+  {
+    "case_id": "outside-06",
+    "question": "双方只有微信聊天记录，怎样判断电子合同是否已经成立？",
+    "category": "out_of_scope",
+    "expected_article_nos": [],
+    "annotation_reason": "询问合同成立及电子形式，样本未涉及成立要件。"
+  },
+  {
+    "case_id": "outside-07",
+    "question": "民间借贷合同约定的利率超过什么标准就不受法律保护？",
+    "category": "out_of_scope",
+    "expected_article_nos": [],
+    "annotation_reason": "样本提及利息支付请求，问题所问的民间借贷利率上限未被覆盖。"
+  }
+]

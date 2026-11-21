@@ -25,10 +25,12 @@ def ingest_laws(
     db_path: Path,
     collection: str,
     manifest: Path,
+    embedding: BgeEmbedding | None = None,
 ) -> dict[str, str | int]:
     """读取本地 UTF-8 原文与 JSON 元数据，返回写入后已核查的清单内容。
 
     数据库和清单必须是不同的新路径，父目录须已存在。模型路径须指向本地 BGE 快照。
+    调用方可传入已加载的同一快照实例，在同进程的离线查询中复用。
     输入、编码、存储和核查异常交给调用方处理。入库产物供后续独立验收后使用。
     """
     db_path = _new_target(db_path)
@@ -53,7 +55,8 @@ def ingest_laws(
         raise ValueError("原文未切分出法律片段")
 
     # 先完成全部编码，避免模型失败时留下空索引。片段和向量按同一顺序传给 Store。
-    embeddings = BgeEmbedding(model_path.expanduser()).encode_documents([chunk.text for chunk in chunks])
+    encoder = embedding if embedding is not None else BgeEmbedding(model_path.expanduser())
+    embeddings = encoder.encode_documents([chunk.text for chunk in chunks])
     if len(embeddings) != len(chunks):
         raise ValueError(f"片段数量 {len(chunks)} 与向量数量 {len(embeddings)} 不一致")
 
