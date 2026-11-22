@@ -76,6 +76,7 @@ def resources(monkeypatch, tmp_path):
         source_path=source_path,
         metadata_path=metadata_path,
         chunk=chunk,
+        other_chunk=chunks[0],
         encoder=encoder,
         store=store,
         embed=create_embedding,
@@ -157,18 +158,115 @@ def test_vector_lifespan_reuses_dependencies_and_does_not_create_llm(resources):
     assert not hasattr(app.state, "agent_runtime")
 
 
-def test_live_vector_backend_can_use_a_stub_llm(resources):
-    llm = Mock(ainvoke=AsyncMock(return_value=AIMessage(content="模拟回答")))
+def _supported_decision(chunk_id: str) -> AIMessage:
+    return AIMessage(content=json.dumps({"status": "supported", "citation_ids": [chunk_id]}))
+
+
+def test_live_vector_generates_with_only_the_selected_citation(resources):
+    chunk = resources.chunk
+    other_chunk = resources.other_chunk
+    resources.store.search.return_value = [(other_chunk, 0.9), (chunk, 0.8)]
+    llm = Mock(
+        ainvoke=AsyncMock(side_effect=[_supported_decision(chunk.kb_chunk_id), AIMessage(content="模拟回答")])
+    )
     resources.llm.side_effect = None
     resources.llm.return_value = llm
     settings = _vector_settings(resources, mode="live")
+    request = _request("vector-live")
+    request["input"]["question"] = "合同违约造成的损失包括可获得的利益吗？"
 
     with TestClient(main.create_app(settings)) as client:
-        response = client.post(ENDPOINT, json=_request("vector-live"))
+        response = client.post(ENDPOINT, json=request)
 
     assert response.status_code == 200
-    assert response.json()["data"]["answer"] == "模拟回答"
+    data = response.json()["data"]
+    assert data["answer"] == "模拟回答"
+    assert [citation["kb_chunk_id"] for citation in data["citations"]] == [chunk.kb_chunk_id]
+    assert data["citations"][0]["quoted_text"] == chunk.text
     resources.llm.assert_called_once_with(settings)
+    assert llm.ainvoke.await_count == 2
+    judge_call, generation_call = llm.ainvoke.await_args_list
+    # 判断看原问题和两条真实候选。生成只看到选中的引用，即使它的检索分数更低。
+    judge_input = json.loads(judge_call.args[0][-1].content)
+    assert judge_input["question"] == request["input"]["question"]
+    assert [candidate["kb_chunk_id"] for candidate in judge_input["candidates"]] == [
+        other_chunk.kb_chunk_id,
+        chunk.kb_chunk_id,
+    ]
+    assert judge_input["candidates"][1]["quoted_text"] == chunk.text
+    assert all("relevance_score" not in candidate for candidate in judge_input["candidates"])
+    generation_prompt = generation_call.args[0][-1].content
+    assert chunk.kb_chunk_id in generation_prompt
+    assert other_chunk.kb_chunk_id not in generation_prompt
+    resources.store.close.assert_called_once_with()
+
+
+@pytest.mark.parametrize(
+    ("status", "answer"),
+    [
+        ("insufficient", "当前核验通过的法条不足以直接回答该问题。"),
+        ("uncertain", "无法可靠判断现有法条是否足以回答该问题。"),
+    ],
+)
+def test_live_vector_skips_generation_without_sufficient_evidence(resources, status, answer):
+    decision = AIMessage(content=json.dumps({"status": status, "citation_ids": []}))
+    llm = Mock(ainvoke=AsyncMock(return_value=decision))
+    resources.llm.side_effect = None
+    resources.llm.return_value = llm
+
+    with TestClient(main.create_app(_vector_settings(resources, mode="live"))) as client:
+        response = client.post(ENDPOINT, json=_request("evidence-" + status))
+
+    assert response.status_code == 200
+    assert response.json()["data"] == {"answer": answer, "citations": []}
+    llm.ainvoke.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    "raw_decision",
+    [
+        pytest.param('{"status":"supported","citation_ids":["<known>","forged"]}', id="unknown-id"),
+        pytest.param('{"status":"supported","citation_ids":[]}', id="empty-selection"),
+        pytest.param('{"status":"uncertain","citation_ids":["<known>"]}', id="contradictory-selection"),
+        pytest.param('{"status":"supported","citation_ids":["<known>","<known>"]}', id="duplicate-id"),
+        pytest.param(
+            '{"status":"insufficient","status":"supported","citation_ids":["<known>"]}', id="duplicate-key"
+        ),
+        pytest.param('{"status":"supported","citation_ids":[1]}', id="invalid-id-type"),
+        pytest.param('{"status":"yes","citation_ids":["<known>"]}', id="invalid-status"),
+        pytest.param(
+            '{"status":"supported","citation_ids":["<known>"],"quoted_text":"模型补写的法条"}',
+            id="unexpected-field",
+        ),
+        pytest.param("结论为 supported", id="not-json"),
+    ],
+)
+def test_live_vector_fails_closed_on_invalid_evidence_decision(resources, raw_decision):
+    # 即使某个 ID 合法，整份判断无效时也不传给生成模型。
+    response_text = raw_decision.replace("<known>", resources.chunk.kb_chunk_id)
+    llm = Mock(ainvoke=AsyncMock(return_value=AIMessage(content=response_text)))
+    resources.llm.side_effect = None
+    resources.llm.return_value = llm
+
+    with TestClient(main.create_app(_vector_settings(resources, mode="live"))) as client:
+        response = client.post(ENDPOINT, json=_request("invalid-evidence-decision"))
+
+    assert response.status_code == 200
+    assert response.json()["data"] == {"answer": "无法可靠判断现有法条是否足以回答该问题。", "citations": []}
+    llm.ainvoke.assert_awaited_once()
+
+
+def test_live_vector_evidence_service_failure_is_503(resources):
+    llm = Mock(ainvoke=AsyncMock(side_effect=TimeoutError("private upstream details")))
+    resources.llm.side_effect = None
+    resources.llm.return_value = llm
+
+    with TestClient(main.create_app(_vector_settings(resources, mode="live"))) as client:
+        response = client.post(ENDPOINT, json=_request("evidence-service-failure"))
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "LLM_UNAVAILABLE"
+    assert "private upstream details" not in response.text
     llm.ainvoke.assert_awaited_once()
     resources.store.close.assert_called_once_with()
 
@@ -185,7 +283,9 @@ def test_vector_citation_filter_applies_before_llm_and_response(resources, caplo
     if include_valid:
         hits.insert(1, (chunk, 0.8))
     resources.store.search.return_value = hits
-    llm = Mock(ainvoke=AsyncMock(return_value=AIMessage(content="模拟回答")))
+    llm = Mock(
+        ainvoke=AsyncMock(side_effect=[_supported_decision(chunk.kb_chunk_id), AIMessage(content="模拟回答")])
+    )
     resources.llm.side_effect = None
     resources.llm.return_value = llm
     request = _request("citation-filter")
@@ -199,10 +299,11 @@ def test_vector_citation_filter_applies_before_llm_and_response(resources, caplo
         assert [citation["kb_chunk_id"] for citation in data["citations"]] == [chunk.kb_chunk_id]
         assert data["citations"][0]["quoted_text"] == chunk.text
         assert data["answer"] == "模拟回答"
-        llm.ainvoke.assert_awaited_once()
-        prompt = llm.ainvoke.await_args.args[0][-1].content
-        assert chunk.text.strip() in prompt
-        assert forged_text not in prompt and forged_id not in prompt
+        assert llm.ainvoke.await_count == 2
+        for model_call in llm.ainvoke.await_args_list:
+            prompt = model_call.args[0][-1].content
+            assert chunk.text.strip() in prompt
+            assert forged_text not in prompt and forged_id not in prompt
     else:
         assert data == {"answer": "未找到直接法律依据，无法给出确定性回答。", "citations": []}
         llm.ainvoke.assert_not_awaited()

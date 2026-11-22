@@ -11,6 +11,8 @@ if TYPE_CHECKING:
     from app.tools.bge_embedding import BgeEmbedding
     from app.tools.milvus_store import MilvusStore
 
+# 把 BGE + Milvus 封装为 Agent 可调用的检索器
+
 
 class VectorLawSearch:
     """在同一事件循环内复用已初始化的模型和存储，每个实例串行执行检索。

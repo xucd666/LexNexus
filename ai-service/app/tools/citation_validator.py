@@ -8,6 +8,8 @@ from app.schemas.contracts import Citation
 from app.schemas.law_chunk import LawChunk
 from app.tools.law_splitter import split_law_articles
 
+# 将返回的 Citation 与独立可信原文进行核对，确保引用的文档版本、片段标识、元数据及正文与参考法条一致。
+
 
 class CitationReferenceError(RuntimeError):
     """可信参考数据缺失、读取失败或包含无效记录。"""
