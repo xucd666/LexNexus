@@ -23,6 +23,9 @@ rag = [
     "sentence-transformers>=6.3,<7",
     "torch>=2.10,<3",
 ]
+mysql = [
+    "pymysql[rsa]==1.2.4",
+]
 
 [build-system]
 requires = ["hatchling"]
