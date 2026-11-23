@@ -1,16 +1,37 @@
 # 律枢（LexNexus）——多智能体法律智能服务平台
 
-律枢（LexNexus）是可扩展的多智能体法律智能服务平台。仓库由 Vue 3 Web 前端、Spring Boot Java 后端和 Python AI-Service 组成。当前主要实现 `LegalQaAgent` 法律问答工作流，使用 FastAPI 接收请求、LangGraph 编排节点、BGE 和 Milvus Lite 检索法条，并在回答前核对引用原文。
+律枢（LexNexus）是可扩展的多智能体法律智能服务平台，当前聚焦可追溯的中文法律问答。调用方通过统一 HTTP 接口提问，服务检索法条、核对原文，在依据充分时返回回答和结构化引用。目前已注册的 Agent 为 `LegalQaAgent`。
 
-## 工程现状
+[快速体验](#本地运行) · [系统架构](#系统架构) · [测试与评测](#工程测试与评测结果)
 
-| 模块 | 当前实现 |
-| --- | --- |
-| Python AI-Service | 提供统一 Agent HTTP 接口。已完成基于真实 DeepSeek、BGE 和 Milvus Lite 的法律问答人工验收，覆盖依据充分时的回答生成、依据不足时的保守兜底，以及充分性判断节点的 PyCharm 断点验证。本次使用《民法典》第 577–584 条的 8 条样本，尚未开展大规模法律问答效果评测。 |
-| Vue 3 前端 | 可独立启动并访问登录、注册和 404 页面。已具备法律问答和合同审查页面及接口封装，业务操作待联调。 [前端说明](frontend/README.md) |
-| Spring Boot 后端 | 可独立启动，提供 `GET /api/v1/health` 和内部 `AiServiceClient`。认证、对外法律问答和合同审查业务接口待开发。 [Java 后端说明](java-backend/README.md) |
+## 项目亮点
 
-## Agent 与向量检索架构
+- **可扩展的 Agent 调度**。FastAPI 按 `agentCode` 调用已注册的 Agent。LangGraph 将检索、校验、判断和回答分成独立节点，便于测试各步骤和短路条件。
+- **本地法条语义检索**。BGE 在本地编码中文问题和法条，Milvus Lite 持久化向量并按余弦相似度取候选，支持小规模语料的本地检索。
+- **确定性的引用核验**。使用独立的法律原文快照，对照文档版本、片段 ID、条号和完整正文，过滤不一致的引用。
+- **依据不足时保守兜底**。DeepSeek 先判断已核验法条是否能直接支撑回答。只有选出的引用 ID 通过本地校验，才进入正式回答生成。
+
+## 当前开发状态
+
+| 状态 | 模块 | 当前边界 |
+| --- | --- | --- |
+| 已完成并验证 | Python AI-Service | 基于《民法典》第 577–584 条的 8 条样本，完成真实 DeepSeek、BGE 与 Milvus Lite 的问答人工验收，覆盖回答生成、依据不足兜底和 PyCharm 断点验证。 |
+| 已实现基础能力，待业务联调 | Java Backend | 可独立启动，提供 `GET /api/v1/health` 和内部 `AiServiceClient`。认证及对外业务 API 待开发。 [Java 后端说明](java-backend/README.md) |
+| 已实现界面与接口封装，待业务联调 | Vue 3 前端 | 可独立查看登录、注册和 404 页面。法律问答和合同审查已具备页面与请求封装，业务操作待对接 Java API。 [前端说明](frontend/README.md) |
+| 已完成并验证 | MySQL 8 权威法律数据 | 已实现法律版本与条文存储。《中华人民共和国民法典》2020 年版第 577–594 条共 18 条已完成真实 MySQL 离线导入，覆盖首次新增 8 条、扩充新增 10 条和重复导入新增 0 条。MySQL 数据尚未同步发布到 Milvus 在线检索索引。 |
+| 后续规划 | 数据发布、业务闭环与 Agent 扩展 | MySQL 与 Milvus 索引的同步发布、法律数据版本治理、Java 业务接口和 Vue 端到端联调、合同审查等独立 Agent。 |
+
+## 技术栈
+
+| 模块 | 技术 | 用途 |
+| --- | --- | --- |
+| AI-Service | Python 3.14、FastAPI、Pydantic、LangGraph、DeepSeek | HTTP 契约、Agent 编排与模型调用 |
+| RAG | BGE-small-zh-v1.5、Milvus Lite | 本地中文向量编码、持久化与 Top-K 检索 |
+| 权威法律数据 | MySQL 8、PyMySQL | 法律版本与条文存储、幂等离线导入 |
+| Java Backend | Java 21、Spring Boot 3、Maven | 健康检查与内部 AI-Service HTTP 客户端 |
+| Web 前端 | Vue 3、TypeScript、Element Plus、Vite | 页面、路由及请求封装 |
+
+## 系统架构
 
 ```mermaid
 flowchart TD
@@ -35,6 +56,8 @@ flowchart TD
 
 实线表示 Agent 调用与节点执行顺序，虚线表示向量模式的依赖。FastAPI lifespan 在启动时装配模型、存储和引用校验器，退出时等待在途检索完成，再关闭服务持有的 Milvus 存储。无候选引用或全部校验失败时，工作流返回无直接依据提示和空引用列表，跳过模型调用。
 
+## Agent 工作流与 RAG 实现
+
 在 `live + vector` 模式下，`assess_evidence` 判断已核验的法条能否直接支撑回答。只有 `supported` 且引用 ID 通过本地校验时，才使用选中的引用调用正式回答模型。`insufficient`、`uncertain` 或无效判断输出会返回保守提示和空引用列表，跳过正式回答模型。判断服务故障沿用 HTTP `503 LLM_UNAVAILABLE`。图中的 `finalize` 是工作流结束后由 `LegalQaAgent` 封装回答与结构化引用的步骤。
 
 ### 法律检索与引用校验
@@ -43,9 +66,26 @@ flowchart TD
 - **在线检索**由 `VectorLawSearch` 实现统一的 `LawSearch` 接口。它使用本地 BGE 对问题编码，按余弦相似度从 Milvus Lite 取 Top-K 候选，再映射为结构化引用。真实 BGE + Milvus 检索链路已完成 HTTP 联调。
 - **确定性校验**使用独立的法律原文与版本元数据构建参考索引。回答前逐条核对文档版本 `document_id`、片段 ID `kb_chunk_id`、法律名称、条号及完整正文。不一致的引用会从提示词和 API 响应中移除。快照缺失、无法读取或解析失败会使向量模式启动失败。
 
-## 离线检索评测
+## 工程测试与评测结果
 
-评测使用《中华人民共和国民法典》第 577–584 条，共 8 条法律样本。28 道人工标注问题包括 14 道库内问题、7 道完全无关问题和 7 道库外法律问题。指标按库内问题的预期法条计算。 [原文样本](ai-service/tests/fixtures/civil_code_2020_articles_577_584.txt) · [评测题集](ai-service/tests/fixtures/law_search_relevance.json)
+### 自动化测试
+
+在 `ai-service/` 运行 Pytest 和 Ruff。
+
+```powershell
+uv sync --locked --extra dev
+uv run --locked --extra dev ruff check app scripts tests
+uv run --locked --extra dev ruff format --check app scripts tests
+uv run --locked --extra dev pytest
+```
+
+RAG-04 发布前的默认 Pytest 回归结果为 270 项通过、3 项跳过。真实 BGE 和 Milvus Lite 集成测试需显式启用。默认测试覆盖 Agent 注册与调用、原文校验、依据不足与非法判断结果、FastAPI 装配与资源关闭、HTTP 输入校验及模拟模型故障。API 区分无可用引用、输入校验失败、Agent 不存在和模型调用失败。 [生命周期测试](ai-service/tests/test_app_lifespan.py) · [Legal QA API 测试](ai-service/tests/test_legal_qa.py)
+
+RAG-05-B 在已安装 `mysql` 可选依赖的环境中完成默认回归，316 项通过、3 项跳过。批次冲突回滚已有替身测试覆盖，真实 MySQL 的冲突回滚尚待单独集成验证。
+
+### 离线检索评测
+
+RAG-04 评测使用《中华人民共和国民法典》第 577–584 条，共 8 条法律样本。28 道人工标注问题包括 14 道库内问题、7 道完全无关问题和 7 道库外法律问题。Hit@K 统计库内问题的前 K 条检索结果中至少包含一条预期法条的比例。 [原文样本](ai-service/tests/fixtures/civil_code_2020_articles_577_584.txt) · [评测题集](ai-service/tests/fixtures/law_search_relevance.json)
 
 | 库内检索指标 | 结果 |
 | --- | ---: |
@@ -96,11 +136,11 @@ AI-Service 使用 CPython 3.14 和 uv。检索后端与回答模式独立配置�
 | --- | --- | --- | --- |
 | 默认 Fake 模式 | `fake` | `fake` | 固定测试材料与离线提示 |
 | 真实向量检索 | `fake` | `vector` | 从 Milvus Lite 返回通过校验的引用，答案字段为离线提示 |
-| DeepSeek 模型模式 | `live` | `vector` | 通过校验的引用可进入 DeepSeek 提示词，需配置模型凭据 |
+| DeepSeek 模型模式 | `live` | `vector` | 先判断依据是否充分，再使用通过校验且获选的引用生成回答，需配置模型凭据 |
 
-### 默认 Fake 模式
+### 快速体验（默认 Fake 模式）
 
-从仓库根目录启动服务。
+从仓库根目录启动服务。Fake 模式使用固定测试材料验证请求、响应与引用传递，无需配置 DeepSeek 密钥、本地 BGE 模型或 Milvus 数据库。
 
 ```powershell
 cd ai-service
@@ -135,19 +175,6 @@ Invoke-RestMethod -Uri 'http://127.0.0.1:8000/api/v1/agent/invoke' `
 uv sync --locked --extra rag
 uv run --locked --extra rag uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
-
-## 测试与异常处理
-
-在 `ai-service/` 运行 Pytest 和 Ruff。
-
-```powershell
-uv sync --locked --extra dev
-uv run --locked --extra dev ruff check app scripts tests
-uv run --locked --extra dev ruff format --check app scripts tests
-uv run --locked --extra dev pytest
-```
-
-测试覆盖 Agent 注册与调用、引用拒绝、FastAPI 装配与资源关闭、HTTP 请求与模拟模型故障。真实 BGE 和 Milvus Lite 集成测试需显式启用。API 区分无可用引用、输入校验失败、Agent 不存在和模型调用失败。
 
 ## 路线图
 
